@@ -1,0 +1,164 @@
+====================================================================
+ENTERPRISE NETWORK SECURITY DESIGN - FULL DEVICE CONFIGURATIONS
+====================================================================
+
+--------------------------------------------------------------------
+DEVICE: Router0 (Edge Internet Router)
+--------------------------------------------------------------------
+enable
+configure terminal
+! Interface facing Server0 (The Internet)
+interface g0/0
+ ip address 8.8.8.1 255.255.255.0
+ no shutdown
+exit
+! Interface facing ASA0
+interface g0/1
+ ip address 10.0.0.2 255.255.255.252
+ no shutdown
+exit
+! Default route pointing to the Firewall
+ip route 0.0.0.0 0.0.0.0 10.0.0.1
+
+
+--------------------------------------------------------------------
+DEVICE: ASA0 (Cisco ASA Firewall)
+Note: Assuming Gi1/1 is Inside (to Router1) and Gi1/2 is Outside (to Router0)
+--------------------------------------------------------------------
+enable
+configure terminal
+! Inside Interface (Facing Router1)
+interface GigabitEthernet1/1
+ nameif inside
+ security-level 100
+ ip address 12.0.0.1 255.255.255.252
+ no shutdown
+exit
+! Outside Interface (Facing Router0)
+interface GigabitEthernet1/2
+ nameif outside
+ security-level 0
+ ip address 10.0.0.1 255.255.255.252
+ no shutdown
+exit
+! Default Route to Router0
+route outside 0.0.0.0 0.0.0.0 10.0.0.2
+! Dynamic NAT to allow internal users to reach the internet
+object network INSIDE-NET
+ subnet 192.168.0.0 255.255.0.0
+ nat (inside,outside) dynamic interface
+exit
+
+
+--------------------------------------------------------------------
+DEVICE: Router1 (Internal Edge Router)
+--------------------------------------------------------------------
+enable
+configure terminal
+! Interface facing ASA0
+interface g0/0
+ ip address 12.0.0.2 255.255.255.252
+ no shutdown
+exit
+! Interface facing Core Switch
+interface g0/1
+ ip address 13.0.0.1 255.255.255.252
+ no shutdown
+exit
+! Default route to ASA
+ip route 0.0.0.0 0.0.0.0 12.0.0.1
+! OSPF Routing (Advertises the connection to the Core, and sends default route)
+router ospf 1
+ network 12.0.0.0 0.0.0.3 area 0
+ network 13.0.0.0 0.0.0.3 area 0
+ default-information originate
+exit
+
+
+--------------------------------------------------------------------
+DEVICE: Multilayer Switch0 (Core Switch)
+Note: Assuming Fa0/1 connects to Router1, and Fa0/2-6 connect to Access Switches
+--------------------------------------------------------------------
+enable
+configure terminal
+! Enable Layer 3 Routing
+ip routing
+
+! Interface facing Router1
+interface fa0/1
+ no switchport
+ ip address 13.0.0.2 255.255.255.252
+ no shutdown
+exit
+
+! Create VLANs
+vlan 10
+vlan 20
+vlan 30
+vlan 40
+vlan 50
+exit
+
+! Create VLAN Gateways (SVIs)
+interface vlan 10
+ ip address 192.168.10.1 255.255.255.0
+ no shutdown
+interface vlan 20
+ ip address 192.168.20.1 255.255.255.0
+ no shutdown
+interface vlan 30
+ ip address 192.168.30.1 255.255.255.0
+ no shutdown
+interface vlan 40
+ ip address 192.168.40.1 255.255.255.0
+ no shutdown
+interface vlan 50
+ ip address 192.168.50.1 255.255.255.0
+ no shutdown
+exit
+
+! Configure Trunks to Access Switches
+interface range fa0/2 - 6
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ no shutdown
+exit
+
+! OSPF Routing
+router ospf 1
+ network 13.0.0.0 0.0.0.3 area 0
+ network 192.168.0.0 0.0.255.255 area 0
+exit
+
+! -----------------------------------------------------------------
+! ZERO TRUST ACCESS CONTROL LISTS (ACLs)
+! -----------------------------------------------------------------
+
+! 1. IT ACL (Can access everything EXCEPT Servers)
+ip access-list extended IT_ACL
+ deny ip 192.168.30.0 0.0.0.255 192.168.50.0 0.0.0.255
+ permit ip any any
+exit
+interface vlan 30
+ ip access-group IT_ACL in
+exit
+
+! 2. HR ACL (Can ONLY access Internet - Blocked from all internal 192.168.x.x)
+ip access-list extended HR_ACL
+ deny ip 192.168.20.0 0.0.0.255 192.168.0.0 0.0.255.255
+ permit ip any any
+exit
+interface vlan 20
+ ip access-group HR_ACL in
+exit
+
+! 3. FINANCE ACL (Can ONLY access Internet - Blocked from all internal 192.168.x.x)
+ip access-list extended FIN_ACL
+ deny ip 192.168.40.0 0.0.0.255 192.168.0.0 0.0.255.255
+ permit ip any any
+exit
+interface vlan 40
+ ip access-group FIN_ACL in
+exit
+
+! 4. ADMIN (VLAN 10) - Full access, no ACL applied.
