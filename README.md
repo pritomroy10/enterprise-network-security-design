@@ -30,7 +30,7 @@ The network is segmented into 5 distinct VLANs to minimize the attack surface an
 *   **Trunk Security:** Configured 802.1Q Trunk links between the Core and Access switches to securely carry multi-VLAN traffic.
 
 ## 🚀 How to Test This Lab (For Reviewers)
-1. Download the `Enterprise-Network-Security.pkt` file and open it in **Cisco Packet Tracer (v8.0+)**.
+1. Download the `Enterprise Network Security Design and Implementation.pkt` file and open it in **Cisco Packet Tracer (v8.0+)**.
 2. **Test Zero Trust (ACLs):** 
    * Open an **HR PC** and ping the **Finance PC**. *Result: Destination Host Unreachable (Blocked).*
    * Open an **IT PC** and ping the **Internal Server**. *Result: Destination Host Unreachable (Blocked).*
