@@ -39,7 +39,7 @@ The network is segmented into 5 distinct VLANs to minimize the attack surface an
    * Open **any PC** (even HR) and ping the External Web Server (`8.8.8.8`). *Result: Success (Proves OSPF, default routing, and NAT are working).*
 
 ## 📂 Repository Contents
-*   `Enterprise-Network-Security.pkt` - The working lab simulation file.
+*   `Enterprise Network Security Design and Implementation.pkt` - The working lab simulation file.
 *   `topology.png` - Visual network diagram.
 *   `configs/` - Text files containing the CLI configurations for the Core Switch, Edge Router, and ASA Firewall.# enterprise-network-security-design
 
